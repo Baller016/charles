@@ -79,16 +79,6 @@ const state = {
             oe: []
         },
         regime: 'neutral', // 'volatile', 'trending', 'ranging'
-    },
-    // Bot Builder State
-    bot: {
-        workspace: null,
-        isRunning: false,
-        stats: { stake: 0, payout: 0, won: 0, lost: 0, profit: 0 },
-        config: { symbol: '1HZ100V', stake: 10, type: 'OVER', barrier: 5 },
-        activeTrade: null, // Stores current proposal_id or contract_id
-        logs: [],
-        activeTab: 'summary'
     }
 };
 
@@ -170,18 +160,6 @@ const DOM = {
     candleContainer: $('candle-chart-container'),
     macdContainer: $('macd-chart-container'),
     cciContainer: $('cci-chart-container'),
-    // Bot Editor
-    botPanel: $('bot-editor-panel'),
-    botFileInput: $('bot-file-input'),
-    botEditor: $('bot-editor-textarea'),
-    downloadBotBtn: $('download-bot-btn'),
-    clearBotBtn: $('clear-bot-btn'),
-    // Bot Builder (D-Bot Style)
-    blocklyDiv: $('blockly-div'),
-    runBotBtn: $('run-bot-btn'),
-    botStatus: $('bot-status-indicator'),
-    botProgress: $('bot-progress'),
-    botJournal: $('bot-journal-list'),
 };
 
 const COLORS = {
@@ -310,9 +288,6 @@ async function routeMessage(msg) {
         case 'candles': handleCandleHistory(msg.candles); break;
         case 'authorize': handleAuthorize(msg.authorize); break;
         case 'balance': handleBalance(msg.balance); break;
-        case 'proposal': handleBotProposal(msg.proposal); break;
-        case 'buy': handleBotBuy(msg.buy); break;
-        case 'proposal_open_contract': handleBotContract(msg.proposal_open_contract); break;
     }
 }
 
@@ -370,7 +345,6 @@ function handleTick(tick) {
     updateSpeedMetrics(now);
     updateTradeRecs();
     updatePatterns();
-    handleBotTick(tick);
 
     if (state.currentMode === 'line') {
         updateLineChart();
@@ -1390,30 +1364,18 @@ document.querySelectorAll('.mode-tab').forEach(btn => {
         state.currentMode = btn.dataset.mode;
         DOM.candlePanel.classList.toggle('hidden', state.currentMode !== 'candle');
         DOM.linePanel.classList.toggle('hidden', state.currentMode !== 'line');
-        DOM.botPanel.classList.toggle('hidden', state.currentMode !== 'bot');
-        DOM.indicatorPanel.style.display = (state.currentMode === 'bot') ? 'none' : 'flex';
+        DOM.indicatorPanel.style.display = 'flex'; // always show
 
-        if (state.currentMode === 'bot') {
-            initBlockly();
-        } else if (state.currentMode === 'line') {
+        if (state.currentMode === 'line') {
             initLineChart();
             updateLineChart();
             updateDistBars();
-        } else if (state.currentMode === 'candle') {
-            setTimeout(() => { initCandleCharts(); }, 50);
+        } else {
+            // Reinit candle charts to fix sizing after hidden
+            setTimeout(() => {
+                initCandleCharts();
+            }, 50);
         }
-    });
-});
-
-// Bot Tab Switching
-document.querySelectorAll('.bot-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const tab = btn.dataset.botTab;
-        state.bot.activeTab = tab;
-        document.querySelectorAll('.bot-tab').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        document.querySelectorAll('.bot-tab-content').forEach(c => c.classList.add('hidden'));
-        $(`bot-tab-${tab}`).classList.remove('hidden');
     });
 });
 
@@ -1731,350 +1693,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, 2000);
     }
-
-    // Bot Editor Event Listeners
-    if (DOM.botFileInput) {
-        DOM.botFileInput.addEventListener('change', handleBotFileUpload);
-    }
-    if (DOM.downloadBotBtn) {
-        DOM.downloadBotBtn.addEventListener('click', downloadEditedBot);
-    }
-    if (DOM.clearBotBtn) {
-        DOM.clearBotBtn.addEventListener('click', () => {
-            if (confirm('Are you sure you want to clear the editor?')) {
-                DOM.botEditor.value = '';
-            }
-        });
-    }
 });
-
-/**
- * Handle bot strategy file upload
- */
-function handleBotFileUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function (event) {
-        DOM.botEditor.value = event.target.result;
-        setStatus(`Bot file "${file.name}" loaded successfully.`, true);
-    };
-    reader.onerror = function () {
-        setStatus('Error reading file.', false);
-    };
-    reader.readAsText(file);
-}
-
-/**
- * Download the edited bot content
- */
-function downloadEditedBot() {
-    const content = DOM.botEditor.value;
-    if (!content) {
-        alert('Editor is empty. Nothing to download.');
-        return;
-    }
-
-    const blob = new Blob([content], { type: 'text/xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'edited_deriv_bot.xml';
-    document.body.appendChild(a);
-    a.click();
-
-    setTimeout(() => {
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-    }, 0);
-
-    setStatus('Bot file downloaded.', true);
-}
-
-// ═══════════════════════════════════════════════════════
-//  VISUAL BOT BUILDER (BLOCKLY)
-// ═══════════════════════════════════════════════════════
-
-function initBlockly() {
-    if (state.bot.workspace) return; // Only init once
-
-    // Define Custom Deriv Blocks
-    Blockly.Blocks['deriv_trade_parameters'] = {
-        init: function () {
-            this.appendDummyInput().appendField("Run once at start:");
-            this.appendStatementInput("INITIALIZATION").setCheck(null);
-            this.appendDummyInput().appendField("Trade options:");
-            this.appendStatementInput("TRADE_OPTIONS").setCheck(null);
-            this.setColour(160);
-            this.setTooltip("The main container for your bot strategy.");
-        }
-    };
-
-    Blockly.Blocks['deriv_market'] = {
-        init: function () {
-            this.appendDummyInput()
-                .appendField("Market:")
-                .appendField(new Blockly.FieldDropdown([
-                    ["Volatility 100 (1s)", "1HZ100V"],
-                    ["Volatility 75 (1s)", "1HZ75V"],
-                    ["Volatility 50 (1s)", "1HZ50V"],
-                    ["Volatility 25 (1s)", "1HZ25V"],
-                    ["Volatility 10 (1s)", "1HZ10V"]
-                ]), "MARKET");
-            this.setPreviousStatement(true, null);
-            this.setNextStatement(true, null);
-            this.setColour(230);
-        }
-    };
-
-    Blockly.Blocks['deriv_stake'] = {
-        init: function () {
-            this.appendDummyInput()
-                .appendField("Set STAKE to")
-                .appendField(new Blockly.FieldNumber(10, 0.35), "STAKE");
-            this.setPreviousStatement(true, null);
-            this.setNextStatement(true, null);
-            this.setColour(230);
-        }
-    };
-
-    Blockly.Blocks['deriv_purchase'] = {
-        init: function () {
-            this.appendDummyInput()
-                .appendField("Purchase")
-                .appendField(new Blockly.FieldDropdown([["Over", "OVER"], ["Under", "UNDER"], ["Odd", "ODD"], ["Even", "EVEN"]]), "TYPE")
-                .appendField("Prediction:")
-                .appendField(new Blockly.FieldNumber(5, 0, 9), "BARRIER");
-            this.setPreviousStatement(true, null);
-            this.setNextStatement(true, null);
-            this.setColour(20);
-        }
-    };
-
-    // Toolbox XML
-    const toolbox = `
-        <xml xmlns="https://developers.google.com/blockly/xml">
-            <category name="Logic" colour="#5b80a5">
-                <block type="controls_if"></block>
-                <block type="logic_compare"></block>
-                <block type="logic_operation"></block>
-                <block type="logic_boolean"></block>
-            </category>
-            <category name="Trade Params" colour="#745ba5">
-                <block type="deriv_trade_parameters"></block>
-                <block type="deriv_market"></block>
-                <block type="deriv_stake"></block>
-            </category>
-            <category name="Purchase" colour="#a55b5b">
-                <block type="deriv_purchase"></block>
-            </category>
-            <category name="Math" colour="#5b67a5">
-                <block type="math_number"></block>
-                <block type="math_arithmetic"></block>
-            </category>
-        </xml>
-    `;
-
-    state.bot.workspace = Blockly.inject('blockly-div', {
-        toolbox: toolbox,
-        scrollbars: true,
-        trashcan: true,
-        theme: Blockly.Themes.Classic // We'll customize this later
-    });
-
-    // Handle Resize
-    window.addEventListener('resize', () => Blockly.svgResize(state.bot.workspace));
-
-    // Set default blocks
-    const defaultXml = `
-        <xml xmlns="https://developers.google.com/blockly/xml">
-            <block type="deriv_trade_parameters" x="20" y="20">
-                <statement name="INITIALIZATION">
-                    <block type="deriv_market">
-                        <field name="MARKET">1HZ100V</field>
-                        <next>
-                            <block type="deriv_stake">
-                                <field name="STAKE">10</field>
-                            </block>
-                        </next>
-                    </block>
-                </statement>
-            </block>
-        </xml>
-    `;
-    Blockly.Xml.domToWorkspace(Blockly.Xml.textToDom(defaultXml), state.bot.workspace);
-}
-
-// Bot Execution Logic
-if ($('run-bot-btn')) {
-    $('run-bot-btn').addEventListener('click', toggleBot);
-}
-
-function toggleBot() {
-    if (state.bot.isRunning) {
-        stopBot();
-    } else {
-        runBot();
-    }
-}
-
-function runBot() {
-    if (!state.bot.workspace) return;
-    if (!state.apiToken) {
-        alert('Please connect your account first.');
-        return;
-    }
-
-    // Parse Workspace for Strategy
-    const allBlocks = state.bot.workspace.getAllBlocks(false);
-    let marketBlock = allBlocks.find(b => b.type === 'deriv_market');
-    let stakeBlock = allBlocks.find(b => b.type === 'deriv_stake');
-    let purchaseBlock = allBlocks.find(b => b.type === 'deriv_purchase');
-
-    if (marketBlock) state.bot.config.symbol = marketBlock.getFieldValue('MARKET');
-    if (stakeBlock) state.bot.config.stake = parseFloat(stakeBlock.getFieldValue('STAKE'));
-    if (purchaseBlock) {
-        state.bot.config.type = purchaseBlock.getFieldValue('TYPE');
-        state.bot.config.barrier = parseInt(purchaseBlock.getFieldValue('BARRIER'));
-    }
-
-    state.bot.isRunning = true;
-    DOM.runBotBtn.innerHTML = '<span>■</span> Stop';
-    DOM.runBotBtn.classList.add('active');
-    DOM.botStatus.innerHTML = `Running: ${state.bot.config.symbol} | $${state.bot.config.stake}`;
-
-    logToJournal(`Bot started. Strategy: ${state.bot.config.type} ${state.bot.config.barrier || ''} on ${state.bot.config.symbol}`, 'success');
-
-    // Subscribe to open contracts to track results
-    wsSend({ proposal_open_contract: 1, subscribe: 1 });
-}
-
-function stopBot() {
-    state.bot.isRunning = false;
-    DOM.runBotBtn.innerHTML = '<span>▶</span> Run';
-    DOM.runBotBtn.classList.remove('active');
-    DOM.botStatus.innerHTML = 'Bot stopped';
-    logToJournal('Bot stopped by user.', 'warn');
-
-    // Cleanup subscriptions
-    wsSend({ forget_all: 'proposal_open_contract' });
-    state.bot.activeTrade = null;
-}
-
-/**
- * Main Check Loop (called on every tick)
- */
-function handleBotTick(tick) {
-    if (!state.bot.isRunning || state.bot.activeTrade) return;
-
-    // Simple strategy: Purchase on every tick if not already in a trade
-    // (In a real bot, we'd evaluate Blockly conditions here)
-    sendBotProposal();
-}
-
-function sendBotProposal() {
-    const config = state.bot.config;
-    let contractType = '';
-
-    if (config.type === 'OVER') contractType = 'DIGITOVER';
-    else if (config.type === 'UNDER') contractType = 'DIGITUNDER';
-    else if (config.type === 'ODD') contractType = 'DIGITODD';
-    else if (config.type === 'EVEN') contractType = 'DIGITEVEN';
-
-    const req = {
-        proposal: 1,
-        amount: config.stake,
-        basis: 'stake',
-        contract_type: contractType,
-        currency: 'USD',
-        duration: 1,
-        duration_unit: 't',
-        symbol: config.symbol
-    };
-
-    if (config.type === 'OVER' || config.type === 'UNDER') {
-        req.barrier = config.barrier.toString();
-    }
-
-    logToJournal(`Requesting proposal for ${config.type}...`, 'info');
-    wsSend(req);
-    state.bot.activeTrade = 'pending_proposal';
-}
-
-function handleBotProposal(proposal) {
-    if (!state.bot.isRunning || state.bot.activeTrade !== 'pending_proposal') return;
-
-    logToJournal(`Proposal received: Payout $${proposal.payout}. Buying...`, 'info');
-    wsSend({ buy: proposal.id, price: state.bot.config.stake });
-    state.bot.activeTrade = 'pending_buy';
-}
-
-function handleBotBuy(buy) {
-    if (!state.bot.isRunning) return;
-
-    logToJournal(`Trade executed! Contract ID: ${buy.contract_id}`, 'success');
-    state.bot.activeTrade = buy.contract_id;
-
-    // Add to Transactions UI (stub for now)
-    updateStatsUI(buy);
-}
-
-function handleBotContract(contract) {
-    if (!state.bot.isRunning || !state.bot.activeTrade) return;
-    if (contract.contract_id !== state.bot.activeTrade && state.bot.activeTrade !== 'pending_buy') return;
-
-    if (contract.is_sold) {
-        const profit = parseFloat(contract.profit);
-        const win = profit > 0;
-
-        logToJournal(`Contract closed. Result: ${win ? 'WIN' : 'LOSS'} (Profit: $${profit.toFixed(2)})`, win ? 'success' : 'warn');
-
-        // Update Stats
-        state.bot.stats.stake += parseFloat(contract.buy_price);
-        state.bot.stats.payout += parseFloat(contract.payout);
-        state.bot.stats.profit += profit;
-        if (win) state.bot.stats.won++; else state.bot.stats.lost++;
-
-        updateSummaryUI();
-        state.bot.activeTrade = null; // Ready for next trade
-    }
-}
-
-function updateSummaryUI() {
-    const s = state.bot.stats;
-    const items = document.querySelectorAll('.bot-stat-val');
-    if (items.length >= 5) {
-        items[0].textContent = `$${s.stake.toFixed(2)} USD`;
-        items[1].textContent = `$${s.payout.toFixed(2)} USD`;
-        items[2].textContent = s.lost;
-        items[3].textContent = s.won;
-        items[4].textContent = `$${s.profit.toFixed(2)} USD`;
-        items[4].className = `bot-stat-val large ${s.profit >= 0 ? 'text-green' : 'text-red'}`;
-    }
-}
-
-function updateStatsUI(buy) {
-    // This could update the "Transactions" tab
-}
-
-function logToJournal(msg, type = 'info') {
-    const time = new Date().toLocaleTimeString();
-    const item = document.createElement('div');
-    item.className = `journal-item journal-${type}`;
-    item.innerHTML = `<span class="journal-time">[${time}]</span> ${msg}`;
-
-    // Remove empty msg if present
-    const empty = DOM.botJournal.querySelector('.journal-empty');
-    if (empty) empty.remove();
-
-    DOM.botJournal.insertBefore(item, DOM.botJournal.firstChild);
-
-    // Bound journal logs
-    while (DOM.botJournal.children.length > 50) {
-        DOM.botJournal.removeChild(DOM.botJournal.lastChild);
-    }
-}
 
 function showLoginError(msg) {
     const el = $('login-error');
