@@ -270,6 +270,9 @@
                         <button class="mode-tab" id="tab-line" data-mode="line">
                             <span>📈</span> Line + Digits
                         </button>
+                        <button class="mode-tab" id="tab-conclusion" data-mode="conclusion">
+                            <span>💡</span> Conclusion
+                        </button>
                     </div>
 
                     <div class="indicator-toggles" id="indicator-panel">
@@ -319,6 +322,61 @@
                             </div>
                         </div>
                         <div class="digit-dist-bars" id="digit-dist-bars"></div>
+                    </div>
+                </div>
+
+                <!-- Conclusion / Insights Panel -->
+                <div class="glass-card chart-main-card hidden" id="conclusion-panel">
+                    <div class="conclusion-content">
+                        <div class="insight-header">
+                            <span class="insight-title">Future Trading Insights</span>
+                            <span class="insight-subtitle">AI-Strategized Market Guidance</span>
+                        </div>
+
+                        <div class="insight-grid">
+                            <!-- Over/Under Section -->
+                            <div class="insight-card-main">
+                                <div class="insight-icon ou-icon">↕</div>
+                                <div class="insight-body">
+                                    <h3>When to Trade OVER/UNDER</h3>
+                                    <ul class="insight-list">
+                                        <li><strong>Identify Trends:</strong> Best during strong directional trends. Use
+                                            'Over 4' if price shows sustained upward momentum.</li>
+                                        <li><strong>Market Volatility:</strong> High volatility indices (e.g., 100 1s)
+                                            favor 'Over/Under' as digits often cluster.</li>
+                                        <li><strong>ML Signal:</strong> When AI Regime is 'Trending', look for sustained
+                                            skew in Over/Under probabilities.</li>
+                                    </ul>
+                                    <div class="insight-tip">Tip: Look for streaks of 3+ over/under digits for momentum
+                                        entries.</div>
+                                </div>
+                            </div>
+
+                            <!-- Even/Odd Section -->
+                            <div class="insight-card-main">
+                                <div class="insight-icon oe-icon">±</div>
+                                <div class="insight-body">
+                                    <h3>When to Trade EVEN/ODD</h3>
+                                    <ul class="insight-list">
+                                        <li><strong>Identify Sideways:</strong> Efficient in ranging markets. Digits
+                                            often oscillate between even/odd more predictably.</li>
+                                        <li><strong>Check Frequency:</strong> Compare Digit Distribution. If one digit
+                                            (e.g. 0) is exceptionally high, 'Even' bias increases.</li>
+                                        <li><strong>ML Signal:</strong> When AI Regime is 'Neutral' or 'Ranging',
+                                            Even/Odd patterns tend to be more stable.</li>
+                                    </ul>
+                                    <div class="insight-tip">Tip: High 'Even' counts often coincide with low volatility
+                                        periods.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="conclusion-footer">
+                            <div class="footer-alert">
+                                <strong>💡 General Rule:</strong> Avoid trading during AI 'Volatile' regimes unless a
+                                clear streak reversal confirms your signal.
+                            </div>
+                        </div>
                     </div>
                 </div>
 

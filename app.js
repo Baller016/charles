@@ -160,6 +160,7 @@ const DOM = {
     candleContainer: $('candle-chart-container'),
     macdContainer: $('macd-chart-container'),
     cciContainer: $('cci-chart-container'),
+    conclusionPanel: $('conclusion-panel'),
 };
 
 const COLORS = {
@@ -1364,7 +1365,8 @@ document.querySelectorAll('.mode-tab').forEach(btn => {
         state.currentMode = btn.dataset.mode;
         DOM.candlePanel.classList.toggle('hidden', state.currentMode !== 'candle');
         DOM.linePanel.classList.toggle('hidden', state.currentMode !== 'line');
-        DOM.indicatorPanel.style.display = 'flex'; // always show
+        DOM.conclusionPanel.classList.toggle('hidden', state.currentMode !== 'conclusion');
+        DOM.indicatorPanel.style.display = state.currentMode !== 'conclusion' ? 'flex' : 'none';
 
         if (state.currentMode === 'line') {
             initLineChart();
