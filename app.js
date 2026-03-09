@@ -79,6 +79,14 @@ const state = {
             oe: []
         },
         regime: 'neutral', // 'volatile', 'trending', 'ranging'
+    },
+    // Bot Builder State
+    bot: {
+        workspace: null,
+        isRunning: false,
+        stats: { stake: 0, payout: 0, won: 0, lost: 0, profit: 0 },
+        logs: [],
+        activeTab: 'summary'
     }
 };
 
@@ -166,6 +174,12 @@ const DOM = {
     botEditor: $('bot-editor-textarea'),
     downloadBotBtn: $('download-bot-btn'),
     clearBotBtn: $('clear-bot-btn'),
+    // Bot Builder (D-Bot Style)
+    blocklyDiv: $('blockly-div'),
+    runBotBtn: $('run-bot-btn'),
+    botStatus: $('bot-status-indicator'),
+    botProgress: $('bot-progress'),
+    botJournal: $('bot-journal-list'),
 };
 
 const COLORS = {
@@ -1373,16 +1387,27 @@ document.querySelectorAll('.mode-tab').forEach(btn => {
         DOM.botPanel.classList.toggle('hidden', state.currentMode !== 'bot');
         DOM.indicatorPanel.style.display = (state.currentMode === 'bot') ? 'none' : 'flex';
 
-        if (state.currentMode === 'line') {
+        if (state.currentMode === 'bot') {
+            initBlockly();
+        } else if (state.currentMode === 'line') {
             initLineChart();
             updateLineChart();
             updateDistBars();
         } else if (state.currentMode === 'candle') {
-            // Reinit candle charts to fix sizing after hidden
-            setTimeout(() => {
-                initCandleCharts();
-            }, 50);
+            setTimeout(() => { initCandleCharts(); }, 50);
         }
+    });
+});
+
+// Bot Tab Switching
+document.querySelectorAll('.bot-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tab = btn.dataset.botTab;
+        state.bot.activeTab = tab;
+        document.querySelectorAll('.bot-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.bot-tab-content').forEach(c => c.classList.add('hidden'));
+        $(`bot-tab-${tab}`).classList.remove('hidden');
     });
 });
 
@@ -1759,6 +1784,173 @@ function downloadEditedBot() {
     }, 0);
 
     setStatus('Bot file downloaded.', true);
+}
+
+// ═══════════════════════════════════════════════════════
+//  VISUAL BOT BUILDER (BLOCKLY)
+// ═══════════════════════════════════════════════════════
+
+function initBlockly() {
+    if (state.bot.workspace) return; // Only init once
+
+    // Define Custom Deriv Blocks
+    Blockly.Blocks['deriv_trade_parameters'] = {
+        init: function () {
+            this.appendDummyInput().appendField("Run once at start:");
+            this.appendStatementInput("INITIALIZATION").setCheck(null);
+            this.appendDummyInput().appendField("Trade options:");
+            this.appendStatementInput("TRADE_OPTIONS").setCheck(null);
+            this.setColour(160);
+            this.setTooltip("The main container for your bot strategy.");
+        }
+    };
+
+    Blockly.Blocks['deriv_market'] = {
+        init: function () {
+            this.appendDummyInput()
+                .appendField("Market:")
+                .appendField(new Blockly.FieldDropdown([
+                    ["Volatility 100 (1s)", "1HZ100V"],
+                    ["Volatility 75 (1s)", "1HZ75V"],
+                    ["Volatility 50 (1s)", "1HZ50V"],
+                    ["Volatility 25 (1s)", "1HZ25V"],
+                    ["Volatility 10 (1s)", "1HZ10V"]
+                ]), "MARKET");
+            this.setPreviousStatement(true, null);
+            this.setNextStatement(true, null);
+            this.setColour(230);
+        }
+    };
+
+    Blockly.Blocks['deriv_stake'] = {
+        init: function () {
+            this.appendDummyInput()
+                .appendField("Set STAKE to")
+                .appendField(new Blockly.FieldNumber(10, 0.35), "STAKE");
+            this.setPreviousStatement(true, null);
+            this.setNextStatement(true, null);
+            this.setColour(230);
+        }
+    };
+
+    Blockly.Blocks['deriv_purchase'] = {
+        init: function () {
+            this.appendDummyInput()
+                .appendField("Purchase")
+                .appendField(new Blockly.FieldDropdown([["Over", "OVER"], ["Under", "UNDER"], ["Odd", "ODD"], ["Even", "EVEN"]]), "TYPE");
+            this.setPreviousStatement(true, null);
+            this.setNextStatement(true, null);
+            this.setColour(20);
+        }
+    };
+
+    // Toolbox XML
+    const toolbox = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+            <category name="Logic" colour="#5b80a5">
+                <block type="controls_if"></block>
+                <block type="logic_compare"></block>
+                <block type="logic_operation"></block>
+                <block type="logic_boolean"></block>
+            </category>
+            <category name="Trade Params" colour="#745ba5">
+                <block type="deriv_trade_parameters"></block>
+                <block type="deriv_market"></block>
+                <block type="deriv_stake"></block>
+            </category>
+            <category name="Purchase" colour="#a55b5b">
+                <block type="deriv_purchase"></block>
+            </category>
+            <category name="Math" colour="#5b67a5">
+                <block type="math_number"></block>
+                <block type="math_arithmetic"></block>
+            </category>
+        </xml>
+    `;
+
+    state.bot.workspace = Blockly.inject('blockly-div', {
+        toolbox: toolbox,
+        scrollbars: true,
+        trashcan: true,
+        theme: Blockly.Themes.Classic // We'll customize this later
+    });
+
+    // Handle Resize
+    window.addEventListener('resize', () => Blockly.svgResize(state.bot.workspace));
+
+    // Set default blocks
+    const defaultXml = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+            <block type="deriv_trade_parameters" x="20" y="20">
+                <statement name="INITIALIZATION">
+                    <block type="deriv_market">
+                        <field name="MARKET">1HZ100V</field>
+                        <next>
+                            <block type="deriv_stake">
+                                <field name="STAKE">10</field>
+                            </block>
+                        </next>
+                    </block>
+                </statement>
+            </block>
+        </xml>
+    `;
+    Blockly.Xml.domToWorkspace(Blockly.Xml.textToDom(defaultXml), state.bot.workspace);
+}
+
+// Bot Execution Logic
+if ($('run-bot-btn')) {
+    $('run-bot-btn').addEventListener('click', toggleBot);
+}
+
+function toggleBot() {
+    if (state.bot.isRunning) {
+        stopBot();
+    } else {
+        runBot();
+    }
+}
+
+function runBot() {
+    state.bot.isRunning = true;
+    DOM.runBotBtn.innerHTML = '<span>■</span> Stop';
+    DOM.runBotBtn.classList.add('active');
+    DOM.botStatus.innerHTML = 'Bot is running... <div class="status-bar-bg"><div class="status-bar-fill" style="width:100%"></div></div>';
+
+    logToJournal('Bot started successfully.', 'success');
+    logToJournal('Setting up trade parameters...', 'info');
+
+    // Simulate initial setup delay
+    setTimeout(() => {
+        logToJournal('Strategy loaded: 1HZ100V (Over/Under)', 'info');
+        logToJournal('Waiting for purchase condition...', 'info');
+    }, 1000);
+}
+
+function stopBot() {
+    state.bot.isRunning = false;
+    DOM.runBotBtn.innerHTML = '<span>▶</span> Run';
+    DOM.runBotBtn.classList.remove('active');
+    DOM.botStatus.innerHTML = 'Bot stopped';
+    logToJournal('Bot stopped by user.', 'warn');
+}
+
+function logToJournal(msg, type = 'info') {
+    const time = new Date().toLocaleTimeString();
+    const item = document.createElement('div');
+    item.className = `journal-item journal-${type}`;
+    item.innerHTML = `<span class="journal-time">[${time}]</span> ${msg}`;
+
+    // Remove empty msg if present
+    const empty = DOM.botJournal.querySelector('.journal-empty');
+    if (empty) empty.remove();
+
+    DOM.botJournal.insertBefore(item, DOM.botJournal.firstChild);
+
+    // Bound journal logs
+    while (DOM.botJournal.children.length > 50) {
+        DOM.botJournal.removeChild(DOM.botJournal.lastChild);
+    }
 }
 
 function showLoginError(msg) {

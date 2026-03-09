@@ -18,6 +18,11 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"
         crossorigin="anonymous"></script>
+    <!-- Blockly for Bot Builder -->
+    <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+    <script src="https://unpkg.com/blockly/blocks_compressed.js"></script>
+    <script src="https://unpkg.com/blockly/javascript_compressed.js"></script>
+    <script src="https://unpkg.com/blockly/msg/en.js"></script>
 </head>
 
 <body>
@@ -271,7 +276,7 @@
                             <span>📈</span> Line + Digits
                         </button>
                         <button class="mode-tab" id="tab-bot" data-mode="bot">
-                            <span>🤖</span> Bot Strategy
+                            <span>🤖</span> Bot Builder
                         </button>
                     </div>
 
@@ -325,29 +330,107 @@
                     </div>
                 </div>
 
-                <!-- Bot Editor Panel -->
+                <!-- Visual Bot Builder Panel -->
                 <div class="glass-card chart-main-card hidden" id="bot-editor-panel">
-                    <div class="bot-editor-header">
-                        <div class="bot-editor-title">
-                            <span class="bot-icon">🤖</span>
-                            <span>Deriv Bot Editor</span>
+                    <div class="bot-builder-layout">
+
+                        <!-- Blocks Sidebar -->
+                        <aside class="bot-sidebar">
+                            <div class="sidebar-search">
+                                <input type="text" placeholder="Search blocks..." id="block-search" />
+                            </div>
+                            <div class="sidebar-menu">
+                                <div class="menu-category" data-category="logic">
+                                    <span class="cat-icon">🔥</span> Analysis Logics
+                                </div>
+                                <div class="menu-category" data-category="trade">
+                                    <span class="cat-icon">📦</span> Trade parameters
+                                </div>
+                                <div class="menu-category" data-category="purchase">
+                                    <span class="cat-icon">🛒</span> Purchase conditions
+                                </div>
+                                <div class="menu-category" data-category="sell">
+                                    <span class="cat-icon">🏷️</span> Sell conditions
+                                </div>
+                                <div class="menu-category" data-category="restart">
+                                    <span class="cat-icon">🔄</span> Restart conditions
+                                </div>
+                                <div class="menu-category" data-category="utility">
+                                    <span class="cat-icon">🛠️</span> Utility
+                                </div>
+                            </div>
+                        </aside>
+
+                        <!-- Central Workspace Area -->
+                        <div class="bot-workspace-area">
+                            <div class="bot-toolbar">
+                                <div class="toolbar-left">
+                                    <button class="tool-btn" title="Open Bot">📂</button>
+                                    <button class="tool-btn" title="Save Bot">💾</button>
+                                    <button class="tool-btn" title="Reset">📉</button>
+                                    <button class="tool-btn" title="Clean">🧹</button>
+                                    <div class="tool-divider"></div>
+                                    <button class="tool-btn">⬅️</button>
+                                    <button class="tool-btn">➡️</button>
+                                    <div class="tool-divider"></div>
+                                    <button class="tool-btn">➕</button>
+                                    <button class="tool-btn">➖</button>
+                                </div>
+                                <div class="bot-run-controls">
+                                    <button class="bot-run-btn" id="run-bot-btn">
+                                        <span class="play-icon">▶</span> Run
+                                    </button>
+                                    <div class="bot-run-status" id="bot-status-indicator">
+                                        Bot is not running
+                                        <div class="status-bar-bg">
+                                            <div class="status-bar-fill" id="bot-progress"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Blockly Canvas -->
+                            <div id="blockly-div" class="blockly-container"></div>
                         </div>
-                        <div class="bot-editor-actions">
-                            <input type="file" id="bot-file-input" accept=".xml,.txt" style="display:none" />
-                            <button class="bot-btn secondary" onclick="$('bot-file-input').click()">
-                                <span>📂</span> Upload Bot
-                            </button>
-                            <button class="bot-btn primary" id="download-bot-btn">
-                                <span>💾</span> Download
-                            </button>
-                            <button class="bot-btn danger" id="clear-bot-btn">
-                                <span>🗑️</span> Clear
-                            </button>
-                        </div>
-                    </div>
-                    <div class="bot-editor-body">
-                        <textarea id="bot-editor-textarea" class="bot-textarea"
-                            placeholder="Upload a Deriv bot file or paste your strategy XML here..."></textarea>
+
+                        <!-- Right Info Area -->
+                        <aside class="bot-info-tabs">
+                            <div class="bot-tabs-header">
+                                <button class="bot-tab active" data-bot-tab="summary">Summary</button>
+                                <button class="bot-tab" data-bot-tab="transactions">Transactions</button>
+                                <button class="bot-tab" data-bot-tab="journal">Journal</button>
+                            </div>
+                            <div class="bot-tab-content" id="bot-tab-summary">
+                                <div class="bot-summary-grid">
+                                    <div class="bot-stat-item">
+                                        <span class="bot-stat-label">Total stake</span>
+                                        <span class="bot-stat-val">0.00 USD</span>
+                                    </div>
+                                    <div class="bot-stat-item">
+                                        <span class="bot-stat-label">Total payout</span>
+                                        <span class="bot-stat-val">0.00 USD</span>
+                                    </div>
+                                    <div class="bot-stat-item">
+                                        <span class="bot-stat-label">Contracts lost</span>
+                                        <span class="bot-stat-val text-red">0</span>
+                                    </div>
+                                    <div class="bot-stat-item">
+                                        <span class="bot-stat-label">Contracts won</span>
+                                        <span class="bot-stat-val text-green">0</span>
+                                    </div>
+                                    <div class="bot-stat-full">
+                                        <span class="bot-stat-label">Total profit/loss</span>
+                                        <span class="bot-stat-val large">0.00 USD</span>
+                                    </div>
+                                </div>
+                                <button class="bot-reset-btn">Reset</button>
+                            </div>
+                            <div class="bot-tab-content hidden" id="bot-tab-journal">
+                                <div class="journal-list" id="bot-journal-list">
+                                    <div class="journal-empty">When you're ready to trade, hit Run. You'll be able to
+                                        track your bot's performance here.</div>
+                                </div>
+                            </div>
+                        </aside>
                     </div>
                 </div>
 
