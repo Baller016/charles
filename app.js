@@ -11,6 +11,7 @@
 const CONFIG = {
     APP_ID: 1089,
     WS_URL: 'wss://ws.binaryws.com/websockets/v3?app_id=1089',
+    OAUTH_URL: 'https://oauth.deriv.com/oauth2/authorize?app_id=1089&l=en',
     RECONNECT_DELAY: 3000,
     MAX_TICK_HISTORY: 500,
     MAX_CANDLE_HISTORY: 300,
@@ -1420,14 +1421,25 @@ function init() {
     buildFreqTable();
     initCandleCharts();
 
-    // Check for saved API token
-    const savedToken = localStorage.getItem('deriv_api_token');
-    if (savedToken) {
-        state.apiToken = savedToken;
+    // 1. Handle OAuth redirect tokens if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const token1 = urlParams.get('token1');
+    if (token1) {
+        state.apiToken = token1;
+        localStorage.setItem('deriv_api_token', token1);
+        // Clean up URL
+        const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+        window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+        setStatus('Logged in via Live Login', true);
+    } else {
+        // 2. Check for saved API token
+        const savedToken = localStorage.getItem('deriv_api_token');
+        if (savedToken) {
+            state.apiToken = savedToken;
+        }
     }
 
-    // URL Parameter Detection: ?symbol=...
-    const urlParams = new URLSearchParams(window.location.search);
+    // 3. URL Parameter Detection: ?symbol=...
     const symParam = urlParams.get('symbol');
     if (symParam) {
         state.symbol = symParam;
@@ -1571,6 +1583,13 @@ function patchWSOpen() {
         };
     }
 }
+
+// ═══════════════════════════════════════════════════════
+//  OAUTH LOGIN
+// ═══════════════════════════════════════════════════════
+window.loginViaOAuth = function() {
+    window.location.href = CONFIG.OAUTH_URL;
+};
 
 // ═══════════════════════════════════════════════════════
 //  LOGIN MODAL FUNCTIONS (global scope for onclick)
