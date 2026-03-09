@@ -2026,3 +2026,138 @@ body {
     font-size: 11px;
     color: var(--text);
 }
+
+/* ═══ BOT EDITOR ═══ */
+.bot-editor-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.bot-editor-panel.hidden {
+    display: none;
+}
+
+.bot-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.bot-editor-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.bot-icon {
+    font-size: 18px;
+}
+
+.bot-editor-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.bot-btn {
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    outline: none;
+    font-family: 'Inter', sans-serif;
+}
+
+.bot-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--border-bright);
+}
+
+.bot-btn.primary {
+    background: var(--cyan);
+    color: #000;
+    border: none;
+    font-weight: 600;
+}
+
+.bot-btn.primary:hover {
+    opacity: 0.9;
+    box-shadow: var(--glow-cyan);
+}
+
+.bot-btn.danger {
+    color: var(--red);
+    border-color: rgba(245, 59, 92, 0.2);
+}
+
+.bot-btn.danger:hover {
+    background: rgba(245, 59, 92, 0.1);
+    border-color: var(--red);
+}
+
+.bot-btn.secondary {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.bot-editor-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.bot-textarea {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    background: #080E1E;
+    color: #9cdcfe; /* VS Code Cyan/Blue logic color */
+    border: none;
+    padding: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+    overflow-y: auto;
+}
+
+.bot-textarea::placeholder {
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+/* Scrollbar for textarea */
+.bot-textarea::-webkit-scrollbar {
+    width: 8px;
+}
+
+.bot-textarea::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.bot-textarea::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+.bot-textarea::-webkit-scrollbar-thumb:hover {
+    background: var(--border-bright);
+}

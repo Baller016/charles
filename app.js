@@ -160,6 +160,12 @@ const DOM = {
     candleContainer: $('candle-chart-container'),
     macdContainer: $('macd-chart-container'),
     cciContainer: $('cci-chart-container'),
+    // Bot Editor
+    botPanel: $('bot-editor-panel'),
+    botFileInput: $('bot-file-input'),
+    botEditor: $('bot-editor-textarea'),
+    downloadBotBtn: $('download-bot-btn'),
+    clearBotBtn: $('clear-bot-btn'),
 };
 
 const COLORS = {
@@ -1364,13 +1370,14 @@ document.querySelectorAll('.mode-tab').forEach(btn => {
         state.currentMode = btn.dataset.mode;
         DOM.candlePanel.classList.toggle('hidden', state.currentMode !== 'candle');
         DOM.linePanel.classList.toggle('hidden', state.currentMode !== 'line');
-        DOM.indicatorPanel.style.display = 'flex'; // always show
+        DOM.botPanel.classList.toggle('hidden', state.currentMode !== 'bot');
+        DOM.indicatorPanel.style.display = (state.currentMode === 'bot') ? 'none' : 'flex';
 
         if (state.currentMode === 'line') {
             initLineChart();
             updateLineChart();
             updateDistBars();
-        } else {
+        } else if (state.currentMode === 'candle') {
             // Reinit candle charts to fix sizing after hidden
             setTimeout(() => {
                 initCandleCharts();
@@ -1587,7 +1594,7 @@ function patchWSOpen() {
 // ═══════════════════════════════════════════════════════
 //  OAUTH LOGIN
 // ═══════════════════════════════════════════════════════
-window.loginViaOAuth = function() {
+window.loginViaOAuth = function () {
     window.location.href = CONFIG.OAUTH_URL;
 };
 
@@ -1693,7 +1700,66 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, 2000);
     }
+
+    // Bot Editor Event Listeners
+    if (DOM.botFileInput) {
+        DOM.botFileInput.addEventListener('change', handleBotFileUpload);
+    }
+    if (DOM.downloadBotBtn) {
+        DOM.downloadBotBtn.addEventListener('click', downloadEditedBot);
+    }
+    if (DOM.clearBotBtn) {
+        DOM.clearBotBtn.addEventListener('click', () => {
+            if (confirm('Are you sure you want to clear the editor?')) {
+                DOM.botEditor.value = '';
+            }
+        });
+    }
 });
+
+/**
+ * Handle bot strategy file upload
+ */
+function handleBotFileUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (event) {
+        DOM.botEditor.value = event.target.result;
+        setStatus(`Bot file "${file.name}" loaded successfully.`, true);
+    };
+    reader.onerror = function () {
+        setStatus('Error reading file.', false);
+    };
+    reader.readAsText(file);
+}
+
+/**
+ * Download the edited bot content
+ */
+function downloadEditedBot() {
+    const content = DOM.botEditor.value;
+    if (!content) {
+        alert('Editor is empty. Nothing to download.');
+        return;
+    }
+
+    const blob = new Blob([content], { type: 'text/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'edited_deriv_bot.xml';
+    document.body.appendChild(a);
+    a.click();
+
+    setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }, 0);
+
+    setStatus('Bot file downloaded.', true);
+}
 
 function showLoginError(msg) {
     const el = $('login-error');

@@ -270,6 +270,9 @@
                         <button class="mode-tab" id="tab-line" data-mode="line">
                             <span>📈</span> Line + Digits
                         </button>
+                        <button class="mode-tab" id="tab-bot" data-mode="bot">
+                            <span>🤖</span> Bot Strategy
+                        </button>
                     </div>
 
                     <div class="indicator-toggles" id="indicator-panel">
@@ -319,6 +322,32 @@
                             </div>
                         </div>
                         <div class="digit-dist-bars" id="digit-dist-bars"></div>
+                    </div>
+                </div>
+
+                <!-- Bot Editor Panel -->
+                <div class="glass-card chart-main-card hidden" id="bot-editor-panel">
+                    <div class="bot-editor-header">
+                        <div class="bot-editor-title">
+                            <span class="bot-icon">🤖</span>
+                            <span>Deriv Bot Editor</span>
+                        </div>
+                        <div class="bot-editor-actions">
+                            <input type="file" id="bot-file-input" accept=".xml,.txt" style="display:none" />
+                            <button class="bot-btn secondary" onclick="$('bot-file-input').click()">
+                                <span>📂</span> Upload Bot
+                            </button>
+                            <button class="bot-btn primary" id="download-bot-btn">
+                                <span>💾</span> Download
+                            </button>
+                            <button class="bot-btn danger" id="clear-bot-btn">
+                                <span>🗑️</span> Clear
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bot-editor-body">
+                        <textarea id="bot-editor-textarea" class="bot-textarea"
+                            placeholder="Upload a Deriv bot file or paste your strategy XML here..."></textarea>
                     </div>
                 </div>
 
