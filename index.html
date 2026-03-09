@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digit Flow Pro · Live Deriv Analyzer</title>
+    <meta name="description"
+        content="Advanced live digit flow analyzer for Deriv markets with AI trading signals, candlestick charts, and technical indicators.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"
+        crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <!-- Ambient Background -->
+    <div class="bg-gradient"></div>
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+    <div class="scan-line"></div>
+
+    <div class="app-wrapper">
+
+        <!-- ===== HEADER ===== -->
+        <header class="top-bar">
+            <div class="brand">
+                <div class="connection-ring" id="connection-ring">
+                    <div class="ring-inner"></div>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-name">Digit Flow <span class="brand-accent">Pro</span></span>
+                    <span class="brand-sub" id="connection-label">Connecting...</span>
+                </div>
+            </div>
+
+            <div class="header-center">
+                <div class="live-price-display">
+                    <span class="price-label">PRICE</span>
+                    <span class="price-value" id="current-price">---</span>
+                </div>
+                <div class="live-digit-badge">
+                    <span class="digit-badge-label">LAST DIGIT</span>
+                    <span class="digit-badge-value" id="header-digit">-</span>
+                </div>
+                <div class="tick-count-badge">
+                    <span class="digit-badge-label">TICKS</span>
+                    <span class="digit-badge-value text-purple" id="tick-counter">0</span>
+                </div>
+            </div>
+
+            <!-- Account Info (shown when logged in) -->
+            <div class="account-info-bar" id="account-info-bar" style="display:none">
+                <span class="acct-type-badge" id="acct-type">--</span>
+                <div class="acct-item">
+                    <span class="acct-label">Account</span>
+                    <span class="acct-val" id="acct-loginid">--</span>
+                </div>
+                <div class="acct-item">
+                    <span class="acct-label">Balance</span>
+                    <span class="acct-val text-green" id="acct-balance">--</span>
+                </div>
+                <div class="acct-item">
+                    <span class="acct-label">Currency</span>
+                    <span class="acct-val text-cyan" id="acct-currency">--</span>
+                </div>
+                <div class="acct-item">
+                    <span class="acct-label">Name</span>
+                    <span class="acct-val" id="acct-name">--</span>
+                </div>
+                <!-- Account switcher: auto-populated when multiple accounts exist -->
+                <div class="acct-switcher" id="acct-switcher" style="display:none"></div>
+                <button class="logout-btn" id="logout-btn">Logout</button>
+            </div>
+
+
+            <div class="header-controls">
+                <select id="market-selector" class="market-select">
+                    <optgroup label="── Volatility Indices ──">
+                        <option value="R_10">Volatility 10 Index</option>
+                        <option value="R_25">Volatility 25 Index</option>
+                        <option value="R_50">Volatility 50 Index</option>
+                        <option value="R_75">Volatility 75 Index</option>
+                        <option value="R_100">Volatility 100 Index</option>
+                    </optgroup>
+                    <optgroup label="── Volatility 1s Indices ──">
+                        <option value="1HZ10V">Volatility 10 (1s)</option>
+                        <option value="1HZ25V">Volatility 25 (1s)</option>
+                        <option value="1HZ50V">Volatility 50 (1s)</option>
+                        <option value="1HZ75V">Volatility 75 (1s)</option>
+                        <option value="1HZ100V" selected>Volatility 100 (1s)</option>
+                    </optgroup>
+                    <optgroup label="── Boom &amp; Crash ──">
+                        <option value="BOOM300N">Boom 300</option>
+                        <option value="BOOM500">Boom 500</option>
+                        <option value="BOOM1000">Boom 1000</option>
+                        <option value="CRASH300N">Crash 300</option>
+                        <option value="CRASH500">Crash 500</option>
+                        <option value="CRASH1000">Crash 1000</option>
+                    </optgroup>
+                    <optgroup label="── Jump Indices ──">
+                        <option value="JD10">Jump 10</option>
+                        <option value="JD25">Jump 25</option>
+                        <option value="JD50">Jump 50</option>
+                        <option value="JD75">Jump 75</option>
+                        <option value="JD100">Jump 100</option>
+                    </optgroup>
+                    <optgroup label="── Range Break ──">
+                        <option value="RDBULL900">Range Break Bull 900</option>
+                        <option value="RDBEAR900">Range Break Bear 900</option>
+                    </optgroup>
+                    <optgroup label="── Step Indices ──">
+                        <option value="stpRNG">Step Index</option>
+                    </optgroup>
+                </select>
+
+                <!-- Login button -->
+                <button class="login-btn" id="login-btn" onclick="openLoginModal()">🔑 Login</button>
+
+                <div class="sample-toggle">
+                    <label class="toggle-label">Ticks</label>
+                    <select id="sample-size" class="mini-select">
+                        <option value="50">50</option>
+                        <option value="100" selected>100</option>
+                        <option value="200">200</option>
+                        <option value="500">500</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <!-- ===== MAIN LAYOUT ===== -->
+        <main class="main-grid">
+
+            <!-- ===== LEFT COLUMN ===== -->
+            <aside class="left-col">
+
+                <!-- Live Digit Stream -->
+                <div class="glass-card digit-stream-card">
+                    <div class="card-header">
+                        <span class="card-title">Live Stream</span>
+                        <span class="candle-timer"><span class="timer-icon">⏱</span><span
+                                id="timer-val">--s</span></span>
+                    </div>
+                    <div class="big-digit-display" id="big-digit">
+                        <span class="big-digit-num" id="big-digit-num">?</span>
+                        <div class="digit-ring" id="digit-ring"></div>
+                    </div>
+                    <div class="recent-stream-title">Recent Digits</div>
+                    <div class="digit-stream" id="digit-stream"></div>
+                </div>
+
+                <!-- AI Signal Card -->
+                <div class="glass-card signal-card" id="signal-card">
+                    <div class="card-header">
+                        <span class="card-title">🤖 AI Signal</span>
+                        <span class="bot-status" id="bot-status">Initializing...</span>
+                    </div>
+                    <div class="signal-action-display" id="signal-action-display">
+                        <div class="signal-main" id="signal-main">WAITING</div>
+                        <div class="signal-sub" id="signal-sub">Collecting data...</div>
+                    </div>
+                    <div class="signal-meta">
+                        <div class="signal-meta-item">
+                            <span class="signal-meta-label">Confidence</span>
+                            <span class="signal-meta-val" id="signal-conf">--</span>
+                        </div>
+                        <div class="signal-meta-item">
+                            <span class="signal-meta-label">Streak</span>
+                            <span class="signal-meta-val text-orange" id="signal-streak">--</span>
+                        </div>
+                    </div>
+
+                    <!-- Advanced ML Meta Info -->
+                    <div class="signal-ml-meta">
+                        <div class="ml-meta-row">
+                            <span class="ml-meta-label">LEARNING:</span>
+                            <span class="ml-meta-val" id="ml-ticks">0 ticks</span>
+                        </div>
+                        <div class="ml-meta-row">
+                            <span class="ml-meta-label">REGIME:</span>
+                            <span class="ml-meta-val" id="ml-regime">Neutral</span>
+                        </div>
+                        <div class="ml-meta-row">
+                            <span class="ml-meta-label">FACTORS:</span>
+                            <span class="ml-meta-val" id="ml-factors">None</span>
+                        </div>
+                    </div>
+                    <div class="hot-cold-row">
+                        <div class="hot-digits">
+                            <span class="hc-label">🔥 HOT</span>
+                            <div class="digit-tags" id="hot-digits-tags"></div>
+                        </div>
+                        <div class="cold-digits">
+                            <span class="hc-label">❄️ COLD</span>
+                            <div class="digit-tags" id="cold-digits-tags"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flow Stats -->
+                <div class="glass-card stats-card">
+                    <div class="card-header">
+                        <span class="card-title">Flow Probabilities</span>
+                        <span class="sample-info" id="sample-info">-- ticks</span>
+                    </div>
+                    <div class="flow-stats-grid">
+                        <div class="flow-stat">
+                            <div class="flow-stat-top">
+                                <span class="flow-stat-label">ODD</span>
+                                <span class="flow-stat-val text-cyan" id="stat-odd">0%</span>
+                            </div>
+                            <div class="flow-bar-bg">
+                                <div class="flow-bar cyan-bar" id="bar-odd" style="width:0%"></div>
+                            </div>
+                        </div>
+                        <div class="flow-stat">
+                            <div class="flow-stat-top">
+                                <span class="flow-stat-label">EVEN</span>
+                                <span class="flow-stat-val text-purple" id="stat-even">0%</span>
+                            </div>
+                            <div class="flow-bar-bg">
+                                <div class="flow-bar purple-bar" id="bar-even" style="width:0%"></div>
+                            </div>
+                        </div>
+                        <div class="flow-stat">
+                            <div class="flow-stat-top">
+                                <span class="flow-stat-label">OVER 4</span>
+                                <span class="flow-stat-val text-green" id="stat-over">0%</span>
+                            </div>
+                            <div class="flow-bar-bg">
+                                <div class="flow-bar green-bar" id="bar-over" style="width:0%"></div>
+                            </div>
+                        </div>
+                        <div class="flow-stat">
+                            <div class="flow-stat-top">
+                                <span class="flow-stat-label">UNDER 5</span>
+                                <span class="flow-stat-val text-red" id="stat-under">0%</span>
+                            </div>
+                            <div class="flow-bar-bg">
+                                <div class="flow-bar red-bar" id="bar-under" style="width:0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </aside>
+
+            <!-- ===== CENTER COLUMN — CHARTS ===== -->
+            <section class="center-col">
+
+                <!-- Chart Top Bar -->
+                <div class="glass-card chart-topbar">
+                    <div class="chart-mode-tabs">
+                        <button class="mode-tab active" id="tab-candle" data-mode="candle">
+                            <span>📊</span> Candlestick
+                        </button>
+                        <button class="mode-tab" id="tab-line" data-mode="line">
+                            <span>📈</span> Line + Digits
+                        </button>
+                    </div>
+
+                    <div class="indicator-toggles" id="indicator-panel">
+                        <span class="toggle-group-label">Indicators:</span>
+                        <button class="ind-btn active" data-ind="ma">MA</button>
+                        <button class="ind-btn active" data-ind="bb">BB</button>
+                        <button class="ind-btn active" data-ind="macd">MACD</button>
+                        <button class="ind-btn active" data-ind="cci">CCI</button>
+                    </div>
+
+                    <div class="timeframe-selector">
+                        <label class="tf-label">TF:</label>
+                        <select id="granularity-select" class="mini-select">
+                            <option value="60" selected>1m</option>
+                            <option value="120">2m</option>
+                            <option value="300">5m</option>
+                            <option value="600">10m</option>
+                            <option value="1800">30m</option>
+                            <option value="3600">1h</option>
+                        </select>
+                        <select id="ma-period-select" class="mini-select">
+                            <option value="9">MA 9</option>
+                            <option value="20" selected>MA 20</option>
+                            <option value="50">MA 50</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Candlestick Chart -->
+                <div class="glass-card chart-main-card" id="candle-chart-panel">
+                    <div id="candle-chart-container" class="chart-container"></div>
+                    <div id="macd-chart-container" class="chart-container macd-container" style="display:none"></div>
+                    <div id="cci-chart-container" class="chart-container cci-container" style="display:none"></div>
+                </div>
+
+                <!-- Line Chart + Digit Distribution -->
+                <div class="glass-card chart-main-card hidden" id="line-chart-panel">
+                    <div class="canvas-wrap">
+                        <canvas id="line-chart-canvas"></canvas>
+                    </div>
+                    <div class="digit-dist-section">
+                        <div class="dist-header">
+                            <span class="dist-title">Digit Distribution</span>
+                            <div class="dist-legend">
+                                <span class="dl-item"><span class="dl-dot cyan"></span>Highest</span>
+                                <span class="dl-item"><span class="dl-dot red"></span>Lowest</span>
+                            </div>
+                        </div>
+                        <div class="digit-dist-bars" id="digit-dist-bars"></div>
+                    </div>
+                </div>
+
+            </section>
+
+
+            <!-- ===== RIGHT COLUMN ===== -->
+            <aside class="right-col">
+
+
+                <!-- Pattern Detection -->
+                <div class="glass-card pattern-card">
+                    <div class="card-header">
+                        <span class="card-title">📡 Patterns Detected</span>
+                    </div>
+                    <div class="pattern-list" id="pattern-list">
+                        <div class="pattern-item empty">Waiting for data...</div>
+                    </div>
+                </div>
+
+                <!-- Trade Recommendation -->
+                <div class="glass-card trade-rec-card">
+                    <div class="card-header">
+                        <span class="card-title">💡 Trade Recommendation</span>
+                    </div>
+                    <div class="trade-recs" id="trade-recs">
+                        <div class="trade-rec-item">
+                            <span class="rec-type">Digits</span>
+                            <div class="rec-box" id="rec-digits">--</div>
+                        </div>
+                        <div class="trade-rec-item">
+                            <span class="rec-type">Odd/Even</span>
+                            <div class="rec-box" id="rec-oe">--</div>
+                        </div>
+                        <div class="trade-rec-item">
+                            <span class="rec-type">Over/Under</span>
+                            <div class="rec-box" id="rec-ou">--</div>
+                        </div>
+                        <div class="trade-rec-item">
+                            <span class="rec-type">Match/Differ</span>
+                            <div class="rec-box" id="rec-md">--</div>
+                        </div>
+                    </div>
+
+                    <!-- AI Learning Accuracy -->
+                    <div class="ml-accuracy-box">
+                        <div class="ml-acc-header">
+                            <span>ONLINE ML ACCURACY</span>
+                            <span class="ml-acc-val" id="ml-total-acc">0%</span>
+                        </div>
+                        <div class="ml-acc-grid">
+                            <div class="ml-acc-item">
+                                <span class="ml-acc-label">Odd/Even</span>
+                                <span class="ml-acc-pct" id="ml-oe-acc">0%</span>
+                            </div>
+                            <div class="ml-acc-item">
+                                <span class="ml-acc-label">Over/Under</span>
+                                <span class="ml-acc-pct" id="ml-ou-acc">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Digit vs Candle Report -->
+                <div class="glass-card digit-candle-report-card" id="digit-candle-report-card">
+                    <div class="card-header">
+                        <span class="card-title">📊 Digit vs Candle Report</span>
+                        <span class="report-badge" id="report-sample-count">-- candles</span>
+                    </div>
+                    <div id="dcr-table-body" class="dcr-table-body">
+                        <div class="dcr-empty">Waiting for candle data...</div>
+                    </div>
+                </div>
+
+                <!-- Market Speed -->
+                <div class="glass-card speed-card">
+                    <div class="card-header">
+                        <span class="card-title">⚡ Market Speed</span>
+                    </div>
+                    <div class="speed-display">
+                        <div class="speed-item">
+                            <span class="speed-label">Ticks/Min</span>
+                            <span class="speed-val text-cyan" id="ticks-per-min">--</span>
+                        </div>
+                        <div class="speed-item">
+                            <span class="speed-label">Last Tick</span>
+                            <span class="speed-val text-green" id="last-tick-time">--</span>
+                        </div>
+                        <div class="speed-item">
+                            <span class="speed-label">Volatility</span>
+                            <span class="speed-val text-orange" id="market-vol">--</span>
+                        </div>
+                    </div>
+                </div>
+
+            </aside>
+
+        </main>
+
+        <!-- ===== STATUS FOOTER ===== -->
+        <footer class="status-footer">
+            <span id="status-msg" class="status-msg">Initializing connection...</span>
+            <span class="status-right">
+                <span class="status-dot" id="ws-indicator"></span>
+                <span id="ws-status-text">WebSocket</span>
+                &nbsp;|&nbsp; Deriv API v3
+            </span>
+        </footer>
+
+    </div>
+
+    <!-- ===== LOGIN MODAL ===== -->
+    <div class="modal-overlay" id="login-modal" style="display:none">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="modal-icon">🔑</span>
+                    <span>Connect Deriv Account</span>
+                </div>
+                <button class="modal-close" onclick="closeLoginModal()">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="modal-intro">
+                    <p>Connect your Deriv account using an <strong>API Token</strong>. Your token is only sent to the
+                        official Deriv WebSocket server and is never stored on any external server.</p>
+                </div>
+
+                <div class="steps-guide">
+                    <div class="step-item">
+                        <div class="step-num">1</div>
+                        <div class="step-desc">Go to <a href="https://app.deriv.com/account/api-token" target="_blank"
+                                class="step-link">app.deriv.com/account/api-token ↗</a></div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">2</div>
+                        <div class="step-desc">Create a token with <strong>Read</strong> scope (add
+                            <strong>Trade</strong> scope if you want to place trades)
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">3</div>
+                        <div class="step-desc">Copy the generated token and paste it below</div>
+                    </div>
+                </div>
+
+                <div class="token-input-group">
+                    <label class="token-label">Your API Token</label>
+                    <div class="token-field-wrap">
+                        <input type="password" id="api-token-input" class="token-input"
+                            placeholder="Paste your Deriv API token here..." autocomplete="off" spellcheck="false" />
+                        <button class="token-eye-btn" id="token-eye-btn" onclick="toggleTokenVisibility()">👁</button>
+                    </div>
+                    <div class="token-hint">Token is saved in your browser's local storage. Click Logout to clear it.
+                    </div>
+                </div>
+
+                <div class="modal-error hidden" id="login-error"></div>
+
+                <div class="modal-actions">
+                    <button class="modal-cancel-btn" onclick="closeLoginModal()">Cancel</button>
+                    <button class="modal-connect-btn" id="connect-btn" onclick="doLogin()">
+                        <span id="connect-btn-text">🔗 Connect Account</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
